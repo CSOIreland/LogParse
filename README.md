@@ -3,7 +3,7 @@ Parses .NET6 application log files
 
 To build the executable type go build
 
-To run the executable type LogParse.exe <directory of log files> where <directory of log files> is the directory where the log files are located.
+To run the executable type LogParse.exe \<directory of log files\> where \<directory of log files\> is the directory where the log files are located.
 
 This will produce an output JSON file with the date when the LogParse executable was run(e.g., results2024-01-03.json).
 
