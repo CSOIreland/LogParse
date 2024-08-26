@@ -13,11 +13,13 @@ import (
 )
 
 type Result struct {
-	LogFile    string
-	Time       string
-	LineNumber int
-	Error      string
-	Frequency  int
+	LogFile       string
+	Time          string
+	Origin        string
+	CorrelationId string
+	LineNumber    int
+	Error         string
+	Frequency     int
 }
 
 var lineBreakRegExp = regexp.MustCompile(`\r\n`)
@@ -68,7 +70,7 @@ func main() {
 	var outputFileName = "results" + now + ".json"
 	var wd, _ = os.Getwd()
 	_ = os.WriteFile(outputFileName, file, 0200)
-	fmt.Println(fmt.Sprintf("Output Filename is %s", wd+outputFileName))
+	fmt.Println(fmt.Sprintf("Output Filename is %s", wd+string(os.PathSeparator)+outputFileName))
 }
 
 func readFile(name string, errors map[string]string) {
@@ -93,8 +95,10 @@ func readFile(name string, errors map[string]string) {
 func parse(errors map[string]string, k string, v string) {
 	var logFile = strings.Split(k, "$")[0]
 	var lineNumber, _ = strconv.Atoi(strings.Split(k, "$")[1])
-	var time = strings.Split(v, "] ")[0] + "]"
-	var error = strings.SplitN(v, "] ", 2)[1]
+	var time = parseTime(v)
+	var origin = parseOrigin(v)
+	var correlationId = parseCorrelationId(v)
+	var error = parseError(v)
 	var frequency = 0
 
 	if len(errors) == 1 {
@@ -102,8 +106,12 @@ func parse(errors map[string]string, k string, v string) {
 	} else {
 		for key, value := range errors {
 			var test = strings.Split(value, "] ")[1]
+
 			// Compare the first 50 characters of error and test and if they are the same, assume that the errors
 			// refer to the same issue
+			if len(error) < 50 || len(test) < 50 {
+				continue
+			}
 			if error[:50] == test[:50] {
 				frequency++
 				delete(errors, key)
@@ -112,11 +120,79 @@ func parse(errors map[string]string, k string, v string) {
 	}
 
 	var result = Result{
-		LogFile:    logFile,
-		LineNumber: lineNumber,
-		Time:       time,
-		Error:      error,
-		Frequency:  frequency,
+		LogFile:       logFile,
+		LineNumber:    lineNumber,
+		Time:          time,
+		Origin:        origin,
+		CorrelationId: correlationId,
+		Error:         error,
+		Frequency:     frequency,
 	}
 	results = append(results, result)
+}
+
+func parseTime(error string) string {
+
+	// Regular expression to match everything before the first square bracket
+	re := regexp.MustCompile(`^(.*?)\s*\[`)
+
+	// Find the match
+	match := re.FindStringSubmatch(error)
+
+	// Check if a match is found
+	if len(match) > 1 {
+		// Print the part before the first square bracket
+		return match[1]
+	}
+	return ""
+}
+
+func parseOrigin(error string) string {
+
+	// Regular expression to match the content inside the first square bracket
+	re := regexp.MustCompile(`\[(.*?)\]`)
+
+	// Find the first match
+	match := re.FindStringSubmatch(error)
+
+	// Check if a match is found
+	if len(match) > 1 {
+		// Print the content inside the first square bracket
+		return match[1]
+	}
+	return ""
+}
+
+func parseCorrelationId(error string) string {
+
+	// Regular expression to match the content inside square brackets
+	re := regexp.MustCompile(`\[(.*?)\]`)
+
+	// Find all matches
+	matches := re.FindAllStringSubmatch(error, -1)
+
+	// Check if there are at least two matches
+	if len(matches) >= 2 {
+		// Print the content inside the second square bracket
+		return matches[1][1]
+	}
+	return ""
+}
+
+func parseError(error string) string {
+
+	// Regular expression to match content within square brackets
+	re := regexp.MustCompile(`\[(.*?)\]`)
+
+	// Find all matches
+	matches := re.FindAllStringSubmatchIndex(error, -1)
+
+	// Check if there are at least three matches
+	if len(matches) >= 3 {
+		// Get the position right after the third match (after the closing bracket)
+		errorIndex := matches[2][1]
+		//correlationIndex := matches[2][2]
+		return error[errorIndex:]
+	}
+	return ""
 }
