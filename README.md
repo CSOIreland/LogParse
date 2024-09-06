@@ -1,5 +1,5 @@
 # LogParse
-Parses .NET6 application log files
+Parses .NET8 application log files
 
 To build the executable type go build
 
