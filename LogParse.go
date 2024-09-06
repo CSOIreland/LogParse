@@ -191,7 +191,6 @@ func parseError(error string) string {
 	if len(matches) >= 3 {
 		// Get the position right after the third match (after the closing bracket)
 		errorIndex := matches[2][1]
-		//correlationIndex := matches[2][2]
 		return error[errorIndex:]
 	}
 	return ""
